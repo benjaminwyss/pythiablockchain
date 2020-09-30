@@ -65,7 +65,7 @@ func init() {
 		os.Exit(1)
 	}
 
-	contract = network.GetContract("pythia")
+	contract = network.GetContract("pythiaQueryLimit")
 
 	fmt.Printf("Blockchain connection initialized\n")
 
@@ -83,6 +83,10 @@ func query(res http.ResponseWriter, req *http.Request) {
 	if p == "1" {
 		proof = true
 	}
+
+	//convert salt to binary to prevent parameter switching avoiding rate limiting
+	saltBytes := []byte(t)
+	t = fmt.Sprintf("%b", saltBytes)
 
 	transientMap := make(map[string][]byte)
 	wBytes, _ := hex.DecodeString(w)
