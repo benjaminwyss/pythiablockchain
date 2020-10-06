@@ -96,6 +96,9 @@ With proof:   query -x password -t salt -p`,
 				c := new(big.Int).SetBytes(cBytes)
 				u := new(big.Int).SetBytes(uBytes)
 
+				saltBytes := []byte(salt)
+				salt = fmt.Sprintf("%b", saltBytes)
+
 				if !pythia.VerifyProof(blindHash, salt, blindResult, p, c, u) {
 					fmt.Printf("Error\nProof failed to verify")
 				} else {
