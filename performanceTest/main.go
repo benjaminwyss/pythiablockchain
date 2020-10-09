@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
@@ -37,6 +38,7 @@ func query(salt string, pass string, proof bool) bool {
 
 	res, _ := http.PostForm(static_urls[1]+"/query", formData)
 	text, _ := ioutil.ReadAll(res.Body)
+	res.Body.Close()
 	strs := strings.Split(string(text), "\n")
 
 	if strs[0] == "Error" {
@@ -105,6 +107,30 @@ func timeQueries(queries int, warmups int, proof bool) {
 	fmt.Printf("Total time to perform %d queries: %dms\nAverage time per query: %dms", queries, end.Milliseconds(), end.Milliseconds()/queriesI64)
 }
 
+func sendRegistrations(registrations int) {
+	for i := 0; i < registrations; i++ {
+		identityInt, _ := rand.Int(rand.Reader, bn256.Order)
+		prekeyInt, _ := rand.Int(rand.Reader, bn256.Order)
+
+		identityStr := hex.EncodeToString(identityInt.Bytes())
+		prekeyStr := hex.EncodeToString(prekeyInt.Bytes())
+
+		formData := url.Values{
+			"w":      {identityStr},
+			"prekey": {prekeyStr},
+		}
+
+		res, _ := http.PostForm(static_urls[1]+"/register", formData)
+		text, _ := ioutil.ReadAll(res.Body)
+		res.Body.Close()
+		strs := strings.Split(string(text), "\n")
+
+		if strs[0] == "Error" {
+			fmt.Printf("%s", text)
+		}
+	}
+}
+
 func main() {
 
 	var choice string
@@ -125,7 +151,11 @@ func main() {
 		proof = true
 	}
 
-	fmt.Println(queries, warmups, proof)
+	fmt.Print("Enter Number of Registrations to Run in Parallel: ")
+	fmt.Scanln(&choice)
+	registrations, _ := strconv.Atoi(choice)
 
+	fmt.Println(queries, warmups, proof, registrations)
+	go sendRegistrations(registrations)
 	timeQueries(queries, warmups, proof)
 }
