@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/hyperledger/fabric-sdk-go/pkg/core/config"
@@ -33,6 +34,7 @@ type QueryNote struct {
 var contract *gateway.Contract
 var gw *gateway.Gateway
 var queryNotes map[string]QueryNote
+var mutex = sync.RWMutex{}
 var QUERY_LIMIT int = 10
 
 func init() {
@@ -103,7 +105,9 @@ func query(res http.ResponseWriter, req *http.Request) {
 	now := time.Now()
 	count := 1
 
+	mutex.RLock()
 	queryNote, ok := queryNotes[t]
+	mutex.RUnlock()
 	if ok {
 		expireTime := queryNote.Timestamp.Add(time.Hour)
 
@@ -118,7 +122,9 @@ func query(res http.ResponseWriter, req *http.Request) {
 	}
 
 	note := QueryNote{count, now}
+	mutex.Lock()
 	queryNotes[t] = note
+	mutex.Unlock()
 
 	transientMap := make(map[string][]byte)
 	wBytes, _ := hex.DecodeString(w)

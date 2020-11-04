@@ -243,6 +243,12 @@ func (s *SmartContract) Register(ctx contractapi.TransactionContextInterface) (s
 
 	pString := hex.EncodeToString(pBytes)
 
+	err = ctx.GetStub().PutPrivateData("pythiaPrivate", "p", pBytes)
+
+	if err != nil {
+		return "", fmt.Errorf("Failed to write public key to private data store: %s", err.Error())
+	}
+
 	return pString, nil
 }
 
