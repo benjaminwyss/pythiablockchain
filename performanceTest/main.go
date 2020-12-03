@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/valyala/fasthttp"
+
 	"github.com/benjaminwyss/pythia"
 	"golang.org/x/crypto/bn256"
 )
@@ -33,21 +35,22 @@ func query(salt string, pass string, proof bool, wg *sync.WaitGroup) bool {
 		p = "1"
 	}
 
-	formData := url.Values{
-		"w": {identity},
-		"x": {x},
-		"t": {salt},
-		"p": {p},
-	}
+	args := fasthttp.AcquireArgs()
+	args.Add("w", identity)
+	args.Add("x", x)
+	args.Add("t", salt)
+	args.Add("p", p)
 
 	which_url := r.Intn(5)
-	res, err := http.PostForm(static_urls[which_url]+"/query", formData)
+
+	_, body, err := fasthttp.Post(nil, static_urls[which_url]+"/query", args)
+
 	if err != nil {
 		fmt.Println("Error connecting to URL. Results are tainted")
 		return false
 	}
-	text, _ := ioutil.ReadAll(res.Body)
-	res.Body.Close()
+	text := string(body)
+
 	strs := strings.Split(string(text), "\n")
 
 	if strs[0] == "Error" {

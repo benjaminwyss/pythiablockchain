@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/benjaminwyss/pythia"
 
@@ -370,6 +371,30 @@ func pythiaMenu() {
 			fmt.Printf("Update Token Successfully Applied!\nResult:\n%s\n\n", updatedHash)
 		} else if choice == "7" {
 			return
+		} else if choice == "8" {
+			identityBytes, _ := hex.DecodeString("4c9943a723f9d3083ae65b5b1c98699cce7e06afce48ec1aacfa742af57a3935")
+			transientMap := make(map[string][]byte)
+			transientMap["identity"] = identityBytes
+
+			blindHash, _ := pythia.HashBlind("password")
+			blindHashStr := hex.EncodeToString(blindHash)
+
+			start := time.Now()
+
+			for i := 0; i < 1000; i++ {
+				txn, err := contract.CreateTransaction("Query", gateway.WithTransient(transientMap))
+				_, err = txn.Evaluate(string(i), blindHashStr)
+
+				if err != nil {
+					fmt.Printf("Failed to query pythia contract: %s\n", err)
+					continue
+				}
+			}
+
+			end := time.Since(start)
+
+			fmt.Printf("Average Latency: %dms\nThroughput: %dq/s\n", end.Milliseconds()/1000, 1000000/end.Milliseconds())
+
 		} else {
 			fmt.Printf("Choice not recognized\n\n")
 		}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -92,31 +93,31 @@ func (s *SmartContract) InitSendGrid(ctx contractapi.TransactionContextInterface
 }
 
 func (s *SmartContract) Query(ctx contractapi.TransactionContextInterface, salt string, blindedHash string) (string, error) {
-	mskBytes, err := ctx.GetStub().GetPrivateData("pythiaPrivate", "msk")
+	mskBytes, _ := ctx.GetStub().GetPrivateData("pythiaPrivate", "msk")
 
-	if err != nil {
-		return "", fmt.Errorf("Failed to get msk from private data store: %s", err.Error())
-	}
+	//if err != nil {
+	//	return "", fmt.Errorf("Failed to get msk from private data store: %s", err.Error())
+	//}
 
-	transMap, err := ctx.GetStub().GetTransient()
+	transMap, _ := ctx.GetStub().GetTransient()
 
-	if err != nil {
-		return "", fmt.Errorf("Failed to get transient input. %s", err.Error())
-	}
+	//if err != nil {
+	//	return "", fmt.Errorf("Failed to get transient input. %s", err.Error())
+	//}
 
-	identityBytes, ok := transMap["identity"]
+	identityBytes, _ := transMap["identity"]
 
-	if !ok {
-		return "", fmt.Errorf("identity not set in transient input.")
-	}
+	//if !ok {
+	//	return "", fmt.Errorf("identity not set in transient input.")
+	//}
 
 	identityString := hex.EncodeToString(identityBytes)
 
-	prekeyBytes, err := ctx.GetStub().GetPrivateData("pythiaPrivate", identityString)
+	prekeyBytes, _ := ctx.GetStub().GetPrivateData("pythiaPrivate", identityString)
 
-	if err != nil {
-		return "", fmt.Errorf("Failed to get prekey value from private data store: %s", err.Error())
-	}
+	//if err != nil {
+	//	return "", fmt.Errorf("Failed to get prekey value from private data store: %s", err.Error())
+	//}
 
 	prekeyString := hex.EncodeToString(prekeyBytes)
 
@@ -124,16 +125,33 @@ func (s *SmartContract) Query(ctx contractapi.TransactionContextInterface, salt 
 
 	x, _ := hex.DecodeString(blindedHash)
 
-	mskString := hex.EncodeToString(mskBytes)
-
 	//Evaluate password onion
 
-	gt := pythia.Eval(w, salt, x, mskString)
-	blindedResult := gt.Marshal()
+	saltHash := sha256.Sum256([]byte(salt))
 
-	blindedResultString := hex.EncodeToString(blindedResult)
+	h := hmac.New(sha256.New, mskBytes)
+	h.Write([]byte(w))
+	kw := h.Sum(nil)
 
-	return blindedResultString, nil
+	xInt := new(big.Int)
+	xInt.SetBytes(x)
+
+	k1 := new(big.Int)
+	k1.SetBytes(kw)
+
+	k1.Mul(k1, xInt)
+
+	k2 := new(big.Int)
+	k2.SetBytes(saltHash[:])
+
+	k1.Mod(k1, bn256.Order)
+	k2.Mod(k2, bn256.Order)
+
+	g1 := new(bn256.G1).ScalarBaseMult(k1)
+	g2 := new(bn256.G2).ScalarBaseMult(k2)
+	gt := bn256.Pair(g1, g2)
+
+	return hex.EncodeToString(gt.Marshal()), nil
 }
 
 func (s *SmartContract) QueryWithProof(ctx contractapi.TransactionContextInterface, salt string, blindedHash string) (*ResultWithProof, error) {
