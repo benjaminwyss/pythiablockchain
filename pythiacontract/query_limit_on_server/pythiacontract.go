@@ -39,7 +39,7 @@ type QueryNote struct {
 }
 
 func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface) error {
-	mskCheck, err := ctx.GetStub().GetPrivateData("pythiaPrivate", "msk")
+	mskCheck, err := ctx.GetStub().GetState("msk")
 
 	if mskCheck != nil {
 		return fmt.Errorf("Error. msk has already been initialized.")
@@ -57,7 +57,7 @@ func (s *SmartContract) Init(ctx contractapi.TransactionContextInterface) error 
 		return fmt.Errorf("msk not set in transient input.")
 	}
 
-	err = ctx.GetStub().PutPrivateData("pythiaPrivate", "msk", mskBytes)
+	err = ctx.GetStub().PutState("msk", mskBytes)
 
 	if err != nil {
 		return fmt.Errorf("Failed to put to private state. %s", err.Error())
@@ -93,7 +93,7 @@ func (s *SmartContract) InitSendGrid(ctx contractapi.TransactionContextInterface
 }
 
 func (s *SmartContract) Query(ctx contractapi.TransactionContextInterface, salt string, blindedHash string) (string, error) {
-	mskBytes, _ := ctx.GetStub().GetPrivateData("pythiaPrivate", "msk")
+	mskBytes, _ := ctx.GetStub().GetState("msk")
 
 	//if err != nil {
 	//	return "", fmt.Errorf("Failed to get msk from private data store: %s", err.Error())
@@ -113,7 +113,7 @@ func (s *SmartContract) Query(ctx contractapi.TransactionContextInterface, salt 
 
 	identityString := hex.EncodeToString(identityBytes)
 
-	prekeyBytes, _ := ctx.GetStub().GetPrivateData("pythiaPrivate", identityString)
+	prekeyBytes, _ := ctx.GetStub().GetState(identityString)
 
 	//if err != nil {
 	//	return "", fmt.Errorf("Failed to get prekey value from private data store: %s", err.Error())
@@ -231,13 +231,13 @@ func (s *SmartContract) Register(ctx contractapi.TransactionContextInterface) (s
 
 	identityString := hex.EncodeToString(identityBytes)
 
-	identityCheck, _ := ctx.GetStub().GetPrivateData("pythiaPrivate", identityString)
+	identityCheck, _ := ctx.GetStub().GetState(identityString)
 
 	if identityCheck != nil {
 		return "", fmt.Errorf("Error. Identity has already been registered")
 	}
 
-	err = ctx.GetStub().PutPrivateData("pythiaPrivate", identityString, prekeyBytes)
+	err = ctx.GetStub().PutState(identityString, prekeyBytes)
 
 	if err != nil {
 		return "", fmt.Errorf("Failed to put to private data store: %s", err.Error())
@@ -245,7 +245,7 @@ func (s *SmartContract) Register(ctx contractapi.TransactionContextInterface) (s
 
 	prekeyString := hex.EncodeToString(prekeyBytes)
 
-	mskBytes, err := ctx.GetStub().GetPrivateData("pythiaPrivate", "msk")
+	mskBytes, err := ctx.GetStub().GetState("msk")
 
 	if err != nil {
 		return "", fmt.Errorf("Failed to get msk from private data store: %s", err.Error())
@@ -261,7 +261,7 @@ func (s *SmartContract) Register(ctx contractapi.TransactionContextInterface) (s
 
 	pString := hex.EncodeToString(pBytes)
 
-	err = ctx.GetStub().PutPrivateData("pythiaPrivate", "p", pBytes)
+	err = ctx.GetStub().PutState("p", pBytes)
 
 	if err != nil {
 		return "", fmt.Errorf("Failed to write public key to private data store: %s", err.Error())
